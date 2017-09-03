@@ -4,4 +4,4 @@
 cmake_minimum_required (VERSION 2.8.11)
 project (lab1)
 
-add_executable (lab1 lab1-resolve-host.cpp)
+add_executable (lab11 lab1-resolve-host.cpp)

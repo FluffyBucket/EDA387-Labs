@@ -15,6 +15,8 @@
 #include <assert.h>
 #include <limits.h>
 #include <unistd.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 
 //--//////////////////////////////////////////////////////////////////////////
 //--    local declarations          ///{{{1///////////////////////////////////
@@ -63,8 +65,27 @@ int main( int aArgc, char* aArgv[] )
 	// Print the initial message
 	printf( "Resolving `%s' from `%s':\n", remoteHostName, localHostName );
 
-	// TODO : add your code here
+    addrinfo hints = {0}, *res;
+    hints.ai_family = AF_INET; // AF_INET => IPv4
+    hints.ai_socktype = SOCK_STREAM; // see below
+    hints.ai_protocol = IPPROTO_TCP; // see below
 
+	int err = getaddrinfo(remoteHostName,NULL,&hints,&res);
+	if (err != 0) {
+        fprintf( stderr,"Failed to get addr: %s\n", gai_strerror(err));
+        return 1;
+	}
+
+    for( addrinfo const *ptr = res; ptr; ptr = ptr->ai_next ) {
+        sockaddr const *sockAddress = ptr->ai_addr;
+        assert( AF_INET == sockAddress->sa_family);
+        sockaddr_in* addr_in = (sockaddr_in*)sockAddress;
+        char addr[16];
+		printf("%s has address %s\n",remoteHostName, inet_ntop(AF_INET, &addr_in->sin_addr,addr,16));
+	}
+    freeaddrinfo(res);
+
+	printf("FIN");
 	// Ok, we're done. Return success.
 	return 0;
 }
