@@ -169,11 +169,12 @@ int main( int argc, char* argv[] )
 	{
 		sockaddr_in clientAddr;
 		socklen_t addrSize = sizeof(clientAddr);
-
+		int maxfd = listenfd;
 
         FD_ZERO(&readfd);
 		FD_ZERO(&writefd);
         FD_SET(listenfd, &readfd);
+
 
         for( size_t i = 0; i < connections.size(); ++i )
         {
@@ -185,10 +186,11 @@ int main( int argc, char* argv[] )
             else {
                 FD_SET(connections[i].sock, &readfd);
             }
+			maxfd = std::max( connections[i].sock, maxfd );
         }
 
 
-        int ret = select(listenfd+1, &readfd, &writefd, 0, 0);
+        int ret = select(maxfd+1, &readfd, &writefd, 0, 0);
 
 		if(ret == 0){
 			continue;
@@ -241,22 +243,27 @@ int main( int argc, char* argv[] )
 		// Repeatedly receive and re-send data from the connection. When
 		// the connection closes, process_client_*() will return false, no
 		// further processing is done.
-		bool processFurther = true;
+
         fprintf(stderr,"Before loop");
 
-        for( size_t i = 0; i < connections.size(); ++i ) {
+        for( size_t i = 0; i < connections.size(); i++ ) {
             fprintf(stderr,"in loop");
-
+			bool processFurther = true;
             if (FD_ISSET(connections[i].sock,&readfd)) {
 				fprintf(stderr,"READ");
 
 				while (processFurther && connections[i].state == eConnStateReceiving)
-                    processFurther = process_client_recv(connections[i]);
+					processFurther = process_client_recv(connections[i]);
             }
             else if (FD_ISSET(connections[i].sock,&writefd)) {
                 while (processFurther && connections[i].state == eConnStateSending)
                     processFurther = process_client_send(connections[i]);
             }
+			// done - close connection
+			if (!processFurther) {
+			    close(connections[i].sock);
+				connections[i].sock = -1;
+			}
         }
 
         // done - close connection
