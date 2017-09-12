@@ -175,11 +175,11 @@ int main( int argc, char* argv[] )
 		FD_ZERO(&writefd);
         FD_SET(listenfd, &readfd);
 
-
+		//Checks the state for all active connections and puts them to the right FD set
         for( size_t i = 0; i < connections.size(); ++i )
         {
-            printf( "Connection %zu: in state %d and has socket %d\n",
-                    i, connections[i].state, connections[i].sock );
+			//Nice debug code from lab pm
+            //printf( "Connection %zu: in state %d and has socket %d\n", i, connections[i].state, connections[i].sock );
             if (connections[i].state == eConnStateSending) {
                 FD_SET(connections[i].sock,&writefd);
             }
@@ -200,7 +200,8 @@ int main( int argc, char* argv[] )
 			perror("Error, something went wrong.");
 			return 1;
 		} 
-		
+
+		//Will add a new connection to the pool if there is a new one
 		if(FD_ISSET(listenfd, &readfd)){
             int clientfd = accept( listenfd, (sockaddr*)&clientAddr, &addrSize );
 
@@ -235,23 +236,14 @@ int main( int argc, char* argv[] )
             connData.state = eConnStateReceiving;
 
             connections.push_back(connData);
-
 		}
-		// accept a single incoming connection
 
-
-		// Repeatedly receive and re-send data from the connection. When
-		// the connection closes, process_client_*() will return false, no
-		// further processing is done.
-
-        fprintf(stderr,"Before loop");
+		// Go through all active connections and receive or send data
+		// If a socket is done it will be closed and removed from the list of active connections
 
         for( size_t i = 0; i < connections.size(); i++ ) {
-            fprintf(stderr,"in loop");
 			bool processFurther = true;
             if (FD_ISSET(connections[i].sock,&readfd)) {
-				fprintf(stderr,"READ");
-
 				while (processFurther && connections[i].state == eConnStateReceiving)
 					processFurther = process_client_recv(connections[i]);
             }
@@ -266,10 +258,6 @@ int main( int argc, char* argv[] )
 			}
         }
 
-        // done - close connection
-        //if (!processFurther) {
-        //    close(connections[i].sock);
-        //}
         connections.erase(
                 std::remove_if(
                         connections.begin(), connections.end(), &is_invalid_connection
@@ -290,10 +278,10 @@ int main( int argc, char* argv[] )
 static bool process_client_recv( ConnectionData& cd )
 {
 	assert( cd.state == eConnStateReceiving );
-    fprintf(stderr,"Above recv()");
+
 	// receive from socket
 	ssize_t ret = recv( cd.sock, cd.buffer, kTransferBufferSize, 0 );
-    fprintf(stderr,"Below recv()");
+
 	if( 0 == ret )
 	{
 #		if VERBOSE
@@ -320,7 +308,6 @@ static bool process_client_recv( ConnectionData& cd )
 
 	// zero-terminate received data
 	cd.buffer[cd.bufferSize] = '\0';
-    fprintf(stderr,"INCOMMING!: %s",cd.buffer);
 	// transition to sending state
 	cd.bufferOffset = 0;
 	cd.state = eConnStateSending;
