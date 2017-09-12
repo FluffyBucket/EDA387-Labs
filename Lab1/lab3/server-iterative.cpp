@@ -144,7 +144,7 @@ static int setup_server_socket( short port );
 int main( int argc, char* argv[] )
 {
 	int serverPort = kServerPort;
-	fd_set readfd;
+	fd_set readfd, writefd;
 	// did the user specify a port?
 	if( 2 == argc )
 	{
@@ -161,8 +161,6 @@ int main( int argc, char* argv[] )
 	if( -1 == listenfd )
 		return 1;
 
-	
-
 
 	// loop forever
 	while( 1 )
@@ -170,12 +168,12 @@ int main( int argc, char* argv[] )
 		sockaddr_in clientAddr;
 		socklen_t addrSize = sizeof(clientAddr);
 
-		FD_ZERO(&readfd);
-		FD_SET(listenfd, &readfd);
-		
-		fprintf(stderr,"Ret = %d", 1);
-		int ret = select(1, &readfd, NULL, NULL, 0);
-		
+
+        FD_ZERO(&readfd);
+		FD_ZERO(&writefd);
+        FD_SET(listenfd, &readfd);
+
+        int ret = select(listenfd+1, &readfd, &writefd, 0, 0);
 
 		if(ret == 0){
 			continue;
@@ -187,13 +185,12 @@ int main( int argc, char* argv[] )
 		} 
 		
 		if(!FD_ISSET(listenfd, &readfd)){
-			
+            fprintf(stderr,"FD_ISSET()");
 			continue;
 		}
 		// accept a single incoming connection
 		int clientfd = accept( listenfd, (sockaddr*)&clientAddr, &addrSize );
-		printf("Kom till clientfd");
-		return 1;
+		
 		if( -1 == clientfd )
 		{
 			perror( "accept() failed" );
